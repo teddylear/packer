@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"os"
 	"strings"
 
@@ -14,13 +13,12 @@ type FormatCommand struct {
 }
 
 func (c *FormatCommand) Run(args []string) int {
-	ctx := context.Background()
 	cfg, ret := c.ParseArgs(args)
 	if ret != 0 {
 		return ret
 	}
 
-	return c.RunContext(ctx, cfg)
+	return c.RunContext(cfg)
 }
 
 func (c *FormatCommand) ParseArgs(args []string) (*FormatArgs, int) {
@@ -42,17 +40,9 @@ func (c *FormatCommand) ParseArgs(args []string) (*FormatArgs, int) {
 	return &cfg, 0
 }
 
-func (c *FormatCommand) RunContext(ctx context.Context, cla *FormatArgs) int {
-	if cla.Check {
-		cla.Write = false
-	}
+func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter) int {
 
-	formatter := hclutils.HCL2Formatter{
-		ShowDiff: cla.Diff,
-		Write:    cla.Write,
-		Output:   os.Stdout,
-	}
-
+	// TODO put the loop here
 	bytesModified, diags := formatter.Format(cla.Path)
 	ret := writeDiags(c.Ui, nil, diags)
 	if ret != 0 {
@@ -65,6 +55,20 @@ func (c *FormatCommand) RunContext(ctx context.Context, cla *FormatArgs) int {
 	}
 
 	return 0
+}
+
+func (c *FormatCommand) RunContext(cla *FormatArgs) int {
+	if cla.Check {
+		cla.Write = false
+	}
+
+	formatter := hclutils.HCL2Formatter{
+		ShowDiff: cla.Diff,
+		Write:    cla.Write,
+		Output:   os.Stdout,
+	}
+
+	return c.processDir(cla, formatter)
 }
 
 func (*FormatCommand) Help() string {
@@ -87,6 +91,8 @@ Options:
   -write=false  Don't write to source files
                 (always disabled if using -check)
 
+  -recursive    Also process files in subdirectories. By default, only the
+                given directory (or current directory) is processed.
 `
 
 	return strings.TrimSpace(helpText)
