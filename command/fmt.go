@@ -1,6 +1,7 @@
 package command
 
 import (
+	"github.com/hashicorp/hcl/v2"
 	"os"
 	"strings"
 
@@ -51,25 +52,29 @@ func (c *FormatCommand) RunContext(cla *FormatArgs) int {
 		Output:   os.Stdout,
 	}
 
-	fmtResult, bytesModified := c.processDir(cla, formatter)
+	var diags hcl.Diagnostics
+	// TODO should I return something else from here?
+	bytesModified := c.processDir(cla, formatter, diags)
+	ret := writeDiags(c.Ui, nil, diags)
+	if ret != 0 {
+		return ret
+	}
 
 	if cla.Check && bytesModified > 0 {
 		return 3
 	}
 
-	return fmtResult
+	return 0
 }
 
-func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter) (int, int) {
+// TODO determine if asterisk matters for Diagnostics here
+func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter, diags hcl.Diagnostics) int {
 
-	// TODO put the loop here
-	bytesModified, diags := formatter.Format(cla.Path)
-	ret := writeDiags(c.Ui, nil, diags)
-	if ret != 0 {
-		return ret, bytesModified
-	}
+	// TODO put the loop here for recursion
+	bytesModified, currentDiag := formatter.Format(cla.Path)
+	diags = diags.Extend(currentDiag)
 
-	return 0, bytesModified
+	return bytesModified
 }
 
 func (*FormatCommand) Help() string {
