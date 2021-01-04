@@ -51,8 +51,13 @@ func (c *FormatCommand) RunContext(cla *FormatArgs) int {
 		Output:   os.Stdout,
 	}
 
-	fmtresult, _ := c.processDir(cla, formatter)
-	return fmtresult
+	fmtResult, bytesModified := c.processDir(cla, formatter)
+
+	if cla.Check && bytesModified > 0 {
+		return 3
+	}
+
+	return fmtResult
 }
 
 func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter) (int, int) {
@@ -62,11 +67,6 @@ func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Forma
 	ret := writeDiags(c.Ui, nil, diags)
 	if ret != 0 {
 		return ret, bytesModified
-	}
-
-	if cla.Check && bytesModified > 0 {
-		// exit code taken from `terraform fmt` command
-		return 3, bytesModified
 	}
 
 	return 0, bytesModified
