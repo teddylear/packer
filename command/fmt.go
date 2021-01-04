@@ -40,23 +40,6 @@ func (c *FormatCommand) ParseArgs(args []string) (*FormatArgs, int) {
 	return &cfg, 0
 }
 
-func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter) int {
-
-	// TODO put the loop here
-	bytesModified, diags := formatter.Format(cla.Path)
-	ret := writeDiags(c.Ui, nil, diags)
-	if ret != 0 {
-		return ret
-	}
-
-	if cla.Check && bytesModified > 0 {
-		// exit code taken from `terraform fmt` command
-		return 3
-	}
-
-	return 0
-}
-
 func (c *FormatCommand) RunContext(cla *FormatArgs) int {
 	if cla.Check {
 		cla.Write = false
@@ -68,7 +51,25 @@ func (c *FormatCommand) RunContext(cla *FormatArgs) int {
 		Output:   os.Stdout,
 	}
 
-	return c.processDir(cla, formatter)
+	fmtresult, _ := c.processDir(cla, formatter)
+	return fmtresult
+}
+
+func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter) (int, int) {
+
+	// TODO put the loop here
+	bytesModified, diags := formatter.Format(cla.Path)
+	ret := writeDiags(c.Ui, nil, diags)
+	if ret != 0 {
+		return ret, bytesModified
+	}
+
+	if cla.Check && bytesModified > 0 {
+		// exit code taken from `terraform fmt` command
+		return 3, bytesModified
+	}
+
+	return 0, bytesModified
 }
 
 func (*FormatCommand) Help() string {
