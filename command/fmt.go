@@ -54,7 +54,7 @@ func (c *FormatCommand) RunContext(cla *FormatArgs) int {
 
 	var diags hcl.Diagnostics
 	// TODO should I return something else from here?
-	bytesModified := c.processDir(cla, formatter, diags)
+	bytesModified := c.processDir(cla.Path, cla.Recursive, formatter, diags)
 	ret := writeDiags(c.Ui, nil, diags)
 	if ret != 0 {
 		return ret
@@ -68,10 +68,10 @@ func (c *FormatCommand) RunContext(cla *FormatArgs) int {
 }
 
 // TODO determine if asterisk matters for Diagnostics here
-func (c *FormatCommand) processDir(cla *FormatArgs, formatter hclutils.HCL2Formatter, diags hcl.Diagnostics) int {
+func (c *FormatCommand) processDir(path string, recursive bool, formatter hclutils.HCL2Formatter, diags hcl.Diagnostics) int {
 
 	// TODO put the loop here for recursion
-	bytesModified, currentDiag := formatter.Format(cla.Path)
+	bytesModified, currentDiag := formatter.Format(path)
 	diags = diags.Extend(currentDiag)
 
 	return bytesModified
