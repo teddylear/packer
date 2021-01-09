@@ -1,8 +1,11 @@
 package command
 
 import (
+	"fmt"
 	"github.com/hashicorp/hcl/v2"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	hclutils "github.com/hashicorp/packer/hcl2template"
@@ -73,6 +76,32 @@ func (c *FormatCommand) processDir(path string, recursive bool, formatter hcluti
 	// TODO put the loop here for recursion
 	bytesModified, currentDiag := formatter.Format(path)
 	diags = diags.Extend(currentDiag)
+
+	if recursive {
+		entries, err := ioutil.ReadDir(path)
+		if err != nil {
+			switch {
+			case os.IsNotExist(err):
+				diags = diags.Extend(fmt.Errorf("There is no configuration directory at %s", path))
+			default:
+				// ReadDir does not produce error messages that are end-user-appropriate,
+				// so we'll need to simplify here.
+				diags = diags.Extend(fmt.Errorf("Cannot read directory %s", path))
+			}
+		}
+
+		for _, info := range entries {
+			name := info.Name()
+			// TODO determine if I need this
+			// if configs.IsIgnoredFile(name) {
+			//   continue
+			// }
+			subPath := filepath.Join(path, name)
+			if info.IsDir() {
+				bytesModified += c.processDir(subPath, recursive, formatter, diags)
+			}
+		}
+	}
 
 	return bytesModified
 }
